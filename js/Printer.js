@@ -1,7 +1,7 @@
 /*
  * This file is part of the Doodle3D project (http://doodle3d.com).
  *
- * Copyright (c) 2013, Doodle3D
+ * Copyright (c) 2013-2014, Doodle3D
  * This software is licensed under the terms of the GNU GPL v2 or later.
  * See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
  */
@@ -149,6 +149,9 @@ function Printer() {
 		return~-encodeURI(s).split(/%..|./).length;
 	}
 
+	/* Note: the API supports numbered chunks as a way to ensure they are received in the correct order.
+	 * Since no problems regarding that seem to exist anymore, this code has not been adapted to use this facility.
+	 */
 	this.sendPrintPart = function(sendIndex,sendLength) {
 		console.log("Printer:sendPrintPart sendIndex: " + sendIndex + "/" + this.gcode.length + ", sendLength: " + sendLength);
 
