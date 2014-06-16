@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Doodle3D debug page</title>
+	<meta charset="utf-8">
+
+	<style>
+		div.page_container {
+			width: 30%;
+			position: absolute;
+			left: 35%;
+			border: 1px solid black;
+			padding: 5px;
+		}
+
+		div.section, div.subsection {
+			display: block;
+			margin-bottom: 10px;
+		}
+
+		div.section > span, div.subsection > span {
+			display: block;
+			font-weight: bold;
+			margin-bottom: 5px;
+
+		}
+
+		div.section > span { font-size: larger; }
+
+		label {
+			min-width: 10em;
+			display: block;
+			float: left;
+		}
+
+		label, input { margin-bottom: 5px; }
+
+		div#status {
+			width: 100%;
+			position: absolute;
+			bottom: 0;
+			background-color: #eee;
+			margin: 0;
+			padding: 0;
+		}
+	</style>
+
+	<script src="js/libs/jquery-1-9-1.min.js"></script>
+
+	<script>
+		var wifiboxIsRemote = false;
+		var wifiboxURL = "";
+		var wifiboxCGIBinURL = "";
+		var tempOnce = false;
+
+		$(document).ready(function() {
+			if (getURLParameter("r") != "null") wifiboxIsRemote = (getURLParameter("r") == "1");
+
+			if (wifiboxIsRemote) {
+				var hostname = "http://192.168.5.1";
+				wifiboxURL = hostname + "/d3dapi";
+				wifiboxCGIBinURL = hostname + "/cgi-bin/d3dapi";
+			} else {
+				wifiboxURL = "http://" + window.location.host + "/d3dapi";
+				wifiboxCGIBinURL = "http://" + window.location.host + "/cgi-bin/d3dapi";
+			}
+
+			console.log("wifiboxURL = " + wifiboxURL);
+
+			if (!tempOnce) populateForm();
+			tempOnce = true;
+
+			$("#debug_form").submit(function(ev) {
+				saveNewConfiguration();
+				ev.preventDefault();
+				return false;
+			});
+		});
+
+		function populateForm() {
+			setStatus("Loading configuration...", "ok");
+			$.ajax({
+					url : this.wifiboxURL + "/config/system?log_path=&p3d_log_basename=&p3d_log_level=&api_log_filename=&api_log_level=",
+					type : "GET",
+					dataType : 'json',
+					timeout : 3000,
+					success : function(data) {
+						console.log("config:system_GET response: ", data);
+						if (data.status == "success") {
+							setStatus("Configuration loaded.", "ok");
+							$("#log_path").val(data.data.log_path);
+							$("#p3d_log_basename").val(data.data.p3d_log_basename);
+							$("#p3d_log_level").val(data.data.p3d_log_level);
+							$("#api_log_filename").val(data.data.api_log_filename);
+							$("#api_log_level").val(data.data.api_log_level);
+						} else {
+							setStatus("Loading configuration failed! (wifibox said: " + data.msg + ")", "error");
+						}
+					}
+				}).fail(function() {
+					console.log("config:system_GET: failed");
+					setStatus("Loading configuration failed! (network error)", "error");
+				});
+		}
+
+		function saveNewConfiguration() {
+			setStatus("Saving configuration...", "ok");
+			var postData = { log_path: $("#log_path").val(),
+					p3d_log_basename: $("#p3d_log_basename").val(), p3d_log_level: $("#p3d_log_level").val(),
+					api_log_filename: $("#api_log_filename").val(), api_log_level: $("#api_log_level").val() };
+
+			$.ajax({
+				url : this.wifiboxURL + "/config/system?log_path=&p3d_log_basename=&p3d_log_level=&api_log_filename=&api_log_level=",
+				type : "POST",
+				data: postData,
+				dataType : 'json',
+				timeout : 3000,
+				success : function(data) {
+					console.log("config:system_POST response: ", data);
+					if (data.status == "success") {
+						setStatus("Configuration saved.", "ok");
+					} else {
+						setStatus("Saving configuration failed! (wifibox said: " + data.msg + ")", "error");
+					}
+				}
+			}).fail(function() {
+				console.log("config:system_POST: failed");
+				setStatus("Saving configuration failed! (network error)", "error");
+			});
+		}
+
+		function setStatus(text, type) {
+			var statusElem = $("#status");
+			statusElem.text(text);
+
+			if (type == "error") statusElem.css("color", "red");
+			else if (type == "warning") statusElem.css("color", "#990");
+			else statusElem.css("color", "black");
+		}
+
+		//http://stackoverflow.com/questions/1403888/get-url-parameter-with-jquery
+		function getURLParameter(name) {
+			return decodeURI(
+				(new RegExp('[&?]'+name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]);
+		}
+	</script>
+</head>
+<body>
+	<div class="page_container">
+		<form id="debug_form" method="post">
+			<div class="section">
+				<span>Log settings</span>
+				<label for="log_path">Log path</label><input id="log_path" type="text" name="log_path">
+				<div class="subsection">
+					<span>Print3d</span>
+					<label for="p3d_log_basename">Base filename</label><input id="p3d_log_basename" type="text" name="p3d_log_basename"><br>
+					<label for="p3d_log_level">Log level</label>
+					<select id="p3d_log_level" name="p3d_log_level">
+						<option value="quiet">quiet</option>
+						<option value="error">error</option>
+						<option value="warning">warning</option>
+						<option value="info">info</option>
+						<option value="verbose">verbose</option>
+						<option value="bulk">bulk</option>
+					</select>
+				</div>
+				<div class="subsection">
+					<span>Firmware</span>
+					<label for="api_log_filename">Filename</label><input id="api_log_filename" type="text" name="api_log_filename"><br>
+					<label for="api_log_level">Log level</label>
+					<select id="api_log_level" name="api_log_level">
+						<option value="quiet">quiet</option>
+						<option value="error">error</option>
+						<option value="warning">warning</option>
+						<option value="info">info</option>
+						<option value="verbose">verbose</option>
+						<option value="bulk">bulk</option>
+					</select>
+				</div>
+			</div>
+			<input type="submit">
+		</form>
+	</div>
+	<div id="status"></div>
+</body>
+</html>
